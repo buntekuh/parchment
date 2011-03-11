@@ -1,7 +1,7 @@
 /*
 
-Z-Machine definition (Gnusto)
-=============================
+Gnusto definition
+=================
 
 Copyright (c) 2008-2011 The Parchment Contributors
 BSD licenced
@@ -9,14 +9,19 @@ http://code.google.com/p/parchment
 
 */
 
-parchment.vms.push({
+parchment.vms.gnusto = {
+	id: 'gnusto',
+	
+	// File pattern
+	match: /(z[1-8]|zlb|(z|zcode.+)(blorb|blb))(.js)?$/i,
+	
 	// Files to load
 	files: /* DEBUG */ [
-			'../src/gnusto/gnusto-engine.js',
+			'../src/gnusto/engine/gnusto-engine.js',
 			'../src/plugins/quetzal.js',
-			'../src/zmachine/runner.js',
-			'../src/zmachine/console.js',
-			'../src/zmachine/zui.js'
+			'../src/gnusto/runner/runner.js',
+			'../src/gnusto/runner/console.js',
+			'../src/gnusto/runner/zui.js'
 		] /* ELSEDEBUG [
 			'gnusto.min.js',
 			'zmachine.min.js'
@@ -46,4 +51,5 @@ parchment.vms.push({
 
 		runner.run();
 	}
-});
+};
+parchment.vms.push( parchment.vms.gnusto );

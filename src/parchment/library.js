@@ -8,10 +8,31 @@ BSD licenced
 http://code.google.com/p/parchment
 
 */
+
+/*
+
+TODO:
+	Display a more specific error if one was given by the proxy
+
+*/
+
 (function(window, $){
 
-var rquery = /story=([^;&]+)/,
-rtitle = /([-\w\s_]+)(\.[\w]+(\.js)?)?$/;
+var rqueryurl = /story=([^;&]+)/,
+rqueryvm = /vm=(\w+)/,
+rtitle = /([-\w\s_]+)(\.[\w]+(\.js)?)?$/,
+rjs = /\.js$/,
+
+// Callback to show an error if a VM's dependant scripts could be successfully loaded
+story_get_fail = function(){
+	throw new FatalError( 'Parchment could not load load the story. Check your connection, and that the URL is correct.' );
+};
+
+// Callback to show an error if a VM's dependant scripts could be successfully loaded
+// Currently not usable as errors are not detected :(
+/*scripts_fail = function(){
+	throw new FatalError( 'Parchment could not load everything it needed to run this story. Check your connection and try refreshing the page.' );
+};*/
 
 // A story file
 parchment.lib.Story = IFF.subClass({
@@ -148,8 +169,10 @@ Library = Object.subClass({
 		
 		options = parchment.options,
 		
-		storyfile = rquery.exec( location.search ),
-		url;
+		storyfile = rqueryurl.exec( location.search ),
+		url,
+		vm = rqueryvm.exec( location.search ),
+		i = 0;
 		
 		// Run the default story only
 		if ( options.lock_story )
@@ -199,10 +222,33 @@ Library = Object.subClass({
 		// We will have to download it
 		//else
 		//{
-			// When Glulx support is added we will need to sniff the filename to decide which to launch
+			// If a VM was explicitly specified, use it
+			if ( vm )
+			{
+				vm = parchment.vms[ vm[1] ];
+			}
+			// Otherwise test each in turn
+			else
+			{
+				for ( ; i < parchment.vms.length; i++ )
+				{
+					if ( parchment.vms[i].match.test( url ) )
+					{
+						vm = parchment.vms[i];
+						break;
+					}
+				}
+			}
+			// Raise an error if we have no VM
+			if ( !vm )
+			{
+				throw new FatalError( 'File type is not supported!' );
+			}
+			
+			// Launch the story with the VM
 			try
 			{
-				this.launch( parchment.vms[0], storyfile );
+				this.launch( vm, storyfile );
 			}
 			catch (e)
 			{
@@ -225,23 +271,38 @@ Library = Object.subClass({
 				{
 					jqXHR.library = self;
 				})
+				// Some error in downloading
+				.fail( story_get_fail )
 			
 		],
 		
 		// Get the scripts if they haven't been loaded already
 		scripts = [],
-		i = 0;
+		i = 0,
+		dependency;
+		
 		if ( !vm.loaded )
 		{
 			vm.loaded = 1;
 			
 			while ( i < vm.files.length )
 			{
-				scripts.push( $.getScript( parchment.options.lib_path + vm.files[i++] ) );
+				dependency = parchment.options.lib_path + vm.files[i++];
+				// JS
+				if ( rjs.test( dependency ) )
+				{
+					scripts.push( $.getScript( dependency ) );
+				}
+				// CSS
+				else
+				{
+					this.ui.stylesheet_add( vm.id, dependency );
+				}
 			}
 			
 			// Use jQuery.when() to get a promise for all of the scripts
 			actions[1] = $.when.apply( 1, scripts );
+				//.fail( scripts_fail );
 		}
 		
 		// Add the launcher callback
